@@ -276,5 +276,6 @@ Original file is located at
 # </style>
 # """, unsafe_allow_html=True)
 
-!streamlit run app.py
+streamlit run app.py
+
 
