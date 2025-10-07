@@ -50,9 +50,22 @@ else:
             "This is the worst thing I ever bought.",
             "Absolutely fantastic experience.",
             "Terrible quality, do not recommend.",
-            "It was okay, not great but not bad either."
+            "It was okay, not great but not bad either.",
+            "This is a positive review.",
+            "Another negative feedback here.",
+            "This is a neutral statement.",
+            "Loved it!",
+            "Hated it.",
+            "It's alright.",
+            "This is a truly positive experience.",
+            "The product was extremely bad.",
+            "It's neither good nor bad, just there."
         ],
-        "label": ["positive", "negative", "positive", "negative", "neutral"]
+        "label": [
+            "positive", "negative", "positive", "negative", "neutral",
+            "positive", "negative", "neutral", "positive", "negative", "neutral",
+            "positive", "negative", "neutral"
+        ]
     })
     st.info("Using sample dataset.")
 
@@ -105,7 +118,7 @@ st.write(f"✅ Vectorization complete using **{vectorizer_choice}**")
 class NetflixModelTrainer:
     def __init__(self):
         self.models = {
-            "Naive Bayes": MultinomialNB(),
+            # "Naive Bayes": MultinomialNB(), # Removed due to negative values in combined features
             "Decision Tree": DecisionTreeClassifier(random_state=42),
             "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42),
             "Random Forest": RandomForestClassifier(n_estimators=150, random_state=42),
@@ -128,9 +141,17 @@ class NetflixModelTrainer:
         # ✅ Apply SMOTE
         if use_smote:
             try:
-                smote = SMOTE(random_state=42, k_neighbors=min(5, len(np.unique(y_train)) - 1))
-                X_train, y_train = smote.fit_resample(X_train, y_train)
-                st.info(f"✅ Applied SMOTE: Training data balanced from {len(y_encoded)} to {len(y_train)} samples.")
+                # Adjust k_neighbors based on the number of samples in the smallest class after train/test split
+                min_samples_in_smallest_class = min(np.bincount(y_train))
+                smote_k_neighbors = min(5, min_samples_in_smallest_class - 1) if min_samples_in_smallest_class > 1 else 0
+
+                if smote_k_neighbors > 0:
+                    smote = SMOTE(random_state=42, k_neighbors=smote_k_neighbors)
+                    X_train, y_train = smote.fit_resample(X_train, y_train)
+                    st.info(f"✅ Applied SMOTE: Training data balanced to {len(y_train)} samples.")
+                else:
+                    st.warning("⚠️ SMOTE skipped: Not enough samples in the smallest class to apply SMOTE.")
+
             except Exception as e:
                 st.warning(f"⚠️ SMOTE skipped due to: {str(e)}")
 
