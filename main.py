@@ -1,6 +1,7 @@
 # ==============================================================
-# 🎬 Netflix-Style Advanced NLP Analyzer with SMOTE Balancing
+# 🎬 Netflix-Style Advanced NLP Analyzer (No SMOTE Version)
 # ==============================================================
+
 !pip install streamlit
 import streamlit as st
 import pandas as pd
@@ -11,7 +12,6 @@ from textblob import TextBlob
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -20,7 +20,6 @@ from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, classification_report
 )
-from imblearn.over_sampling import SMOTE
 import matplotlib.pyplot as plt
 import seaborn as sns
 import time
@@ -33,7 +32,6 @@ st.set_page_config(page_title="Netflix Style NLP Analyzer", layout="wide")
 st.sidebar.title("🎛 Netflix NLP Control Panel")
 st.sidebar.markdown("### Choose your analysis flow")
 vectorizer_choice = st.sidebar.selectbox("Select Vectorization Method", ["TF-IDF", "Count Vectorizer"])
-apply_smote = st.sidebar.checkbox("🔁 Apply SMOTE Balancing", value=True)
 st.sidebar.markdown("---")
 st.sidebar.info("Upload your dataset or use a sample.")
 
@@ -114,19 +112,17 @@ st.write(f"✅ Vectorization complete using **{vectorizer_choice}**")
 # ==============================================================
 # 🧩 Netflix Style Model Trainer
 # ==============================================================
-
 class NetflixModelTrainer:
     def __init__(self):
         self.models = {
-            # "Naive Bayes": MultinomialNB(), # Removed due to negative values in combined features
             "Decision Tree": DecisionTreeClassifier(random_state=42),
             "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42),
             "Random Forest": RandomForestClassifier(n_estimators=150, random_state=42),
             "SVM": SVC(kernel='linear', probability=True, random_state=42)
         }
 
-    def train_and_evaluate(self, X, y, use_smote=True):
-        """Train models with optional SMOTE balancing"""
+    def train_and_evaluate(self, X, y):
+        """Train models (No SMOTE version)"""
         results = {}
 
         le = LabelEncoder()
@@ -137,23 +133,6 @@ class NetflixModelTrainer:
         X_train, X_test, y_train, y_test = train_test_split(
             X, y_encoded, test_size=test_size, random_state=42, stratify=y_encoded
         )
-
-        # ✅ Apply SMOTE
-        if use_smote:
-            try:
-                # Adjust k_neighbors based on the number of samples in the smallest class after train/test split
-                min_samples_in_smallest_class = min(np.bincount(y_train))
-                smote_k_neighbors = min(5, min_samples_in_smallest_class - 1) if min_samples_in_smallest_class > 1 else 0
-
-                if smote_k_neighbors > 0:
-                    smote = SMOTE(random_state=42, k_neighbors=smote_k_neighbors)
-                    X_train, y_train = smote.fit_resample(X_train, y_train)
-                    st.info(f"✅ Applied SMOTE: Training data balanced to {len(y_train)} samples.")
-                else:
-                    st.warning("⚠️ SMOTE skipped: Not enough samples in the smallest class to apply SMOTE.")
-
-            except Exception as e:
-                st.warning(f"⚠️ SMOTE skipped due to: {str(e)}")
 
         progress_container = st.empty()
 
@@ -171,8 +150,6 @@ class NetflixModelTrainer:
             try:
                 model.fit(X_train, y_train)
                 y_pred = model.predict(X_test)
-                y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
-
                 results[name] = {
                     "accuracy": accuracy_score(y_test, y_pred),
                     "precision": precision_score(y_test, y_pred, average='weighted', zero_division=0),
@@ -195,21 +172,20 @@ class NetflixModelTrainer:
 # ==============================================================
 st.subheader("🎯 Step 3: Train & Evaluate Models")
 trainer = NetflixModelTrainer()
-results, le = trainer.train_and_evaluate(X_combined, y, use_smote=apply_smote)
+results, le = trainer.train_and_evaluate(X_combined, y)
 
 # ==============================================================
 # 📊 Results Visualization
 # ==============================================================
 st.subheader("📈 Step 4: Results Dashboard")
 
-scores_df = pd.DataFrame([
-    {"Model": k,
-     "Accuracy": v["accuracy"],
-     "Precision": v["precision"],
-     "Recall": v["recall"],
-     "F1 Score": v["f1_score"]}
-    for k, v in results.items() if "accuracy" in v
-])
+scores_df = pd.DataFrame([{
+    "Model": k,
+    "Accuracy": v["accuracy"],
+    "Precision": v["precision"],
+    "Recall": v["recall"],
+    "F1 Score": v["f1_score"]
+} for k, v in results.items() if "accuracy" in v])
 
 st.dataframe(scores_df.style.highlight_max(color="lightgreen", axis=0))
 
