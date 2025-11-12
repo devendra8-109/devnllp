@@ -1,5 +1,5 @@
 # ============================================
-# 🎬 NLP Analysis Suite with SMOTE & Fact Check
+# NLP Analysis Suite with SMOTE & Fact Check
 # ============================================
 
 import streamlit as st
@@ -31,7 +31,7 @@ import seaborn as sns
 # ============================
 st.set_page_config(
     page_title="NLP Analyzer Pro",
-    page_icon="🔍",
+    page_icon=":mag:",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -405,33 +405,6 @@ st.markdown("""
         font-size: 0.8rem;
         font-weight: 600;
     }
-    
-    /* Confidence Meter */
-    .confidence-meter {
-        background: var(--netflix-gray);
-        border-radius: 10px;
-        height: 8px;
-        margin: 0.5rem 0;
-        overflow: hidden;
-    }
-    
-    .confidence-fill {
-        height: 100%;
-        border-radius: 10px;
-        transition: width 0.3s ease;
-    }
-    
-    .confidence-high {
-        background: var(--fact-check-green);
-    }
-    
-    .confidence-medium {
-        background: var(--fact-check-yellow);
-    }
-    
-    .confidence-low {
-        background: var(--fact-check-red);
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -454,11 +427,36 @@ nlp = load_nlp_model()
 stop_words = STOP_WORDS
 
 # ============================
-# Google Fact Check API Integration
+# Google Fact Check API Integration - FIXED VERSION
 # ============================
 class GoogleFactCheckAPI:
     def __init__(self, api_key=None):
-        self.api_key = api_key or st.secrets.get("GOOGLE_FACT_CHECK_API_KEY", "")
+        # Try multiple sources for API key with proper error handling
+        self.api_key = None
+        
+        # Method 1: Direct parameter
+        if api_key and api_key.strip():
+            self.api_key = api_key.strip()
+        
+        # Method 2: Streamlit secrets (primary method)
+        elif hasattr(st, 'secrets'):
+            try:
+                secrets_api_key = st.secrets.get("GOOGLE_FACT_CHECK_API_KEY", "")
+                if secrets_api_key and secrets_api_key.strip():
+                    self.api_key = secrets_api_key.strip()
+            except Exception:
+                pass
+        
+        # Method 3: Environment variable (fallback)
+        if not self.api_key:
+            try:
+                import os
+                env_api_key = os.environ.get("GOOGLE_FACT_CHECK_API_KEY", "")
+                if env_api_key and env_api_key.strip():
+                    self.api_key = env_api_key.strip()
+            except Exception:
+                pass
+        
         self.base_url = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
         
     def search_claims(self, query, language_code="en", max_claims=10, page_size=10):
@@ -613,10 +611,10 @@ class NetflixModelTrainer:
     def __init__(self, use_smote=True):
         self.use_smote = use_smote
         self.models = {
-            "🎬 Logistic Regression": LogisticRegression(max_iter=1000, random_state=42, class_weight='balanced'),
-            "🌲 Random Forest": RandomForestClassifier(n_estimators=150, random_state=42, class_weight='balanced'),
-            "⚡ Support Vector": SVC(random_state=42, probability=True, class_weight='balanced'),
-            "📊 Naive Bayes": MultinomialNB()
+            "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42, class_weight='balanced'),
+            "Random Forest": RandomForestClassifier(n_estimators=150, random_state=42, class_weight='balanced'),
+            "Support Vector": SVC(random_state=42, probability=True, class_weight='balanced'),
+            "Naive Bayes": MultinomialNB()
         }
     
     def analyze_class_distribution(self, y):
@@ -631,7 +629,7 @@ class NetflixModelTrainer:
         colors = ['#e50914', '#b20710', '#8c0610', '#660208', '#400104']
         bars = ax1.bar(range(len(class_counts)), class_counts.values, color=colors[:len(class_counts)])
         ax1.set_facecolor('#141414')
-        ax1.set_title('📊 Class Distribution', fontweight='bold', color='white', fontsize=14)
+        ax1.set_title('Class Distribution', fontweight='bold', color='white', fontsize=14)
         ax1.set_xlabel('Classes', fontweight='bold', color='white')
         ax1.set_ylabel('Count', fontweight='bold', color='white')
         ax1.tick_params(axis='x', colors='white')
@@ -649,7 +647,7 @@ class NetflixModelTrainer:
             colors_pie = plt.cm.Reds(np.linspace(0.4, 0.8, len(class_counts)))
             wedges, texts, autotexts = ax2.pie(class_counts.values, labels=class_counts.index, 
                                              autopct='%1.1f%%', colors=colors_pie, startangle=90)
-            ax2.set_title('🎯 Class Proportions', fontweight='bold', color='white', fontsize=14)
+            ax2.set_title('Class Proportions', fontweight='bold', color='white', fontsize=14)
             
             for text in texts:
                 text.set_color('white')
@@ -678,7 +676,7 @@ class NetflixModelTrainer:
         )
         
         # Display class distribution analysis
-        st.markdown("#### 📈 CLASS DISTRIBUTION ANALYSIS")
+        st.markdown("#### CLASS DISTRIBUTION ANALYSIS")
         st.pyplot(distribution_fig)
         
         # Show SMOTE recommendation
@@ -689,11 +687,11 @@ class NetflixModelTrainer:
         smote_info = st.container()
         with smote_info:
             if imbalance_ratio > 2 and self.use_smote:
-                st.success(f"🔧 **SMOTE Applied**: Class imbalance detected (ratio: {imbalance_ratio:.1f}:1). Generating synthetic samples...")
+                st.success(f"SMOTE Applied: Class imbalance detected (ratio: {imbalance_ratio:.1f}:1). Generating synthetic samples...")
             elif self.use_smote:
-                st.info("⚖️ **Balanced Data**: Class distribution is relatively balanced. SMOTE may provide minor improvements.")
+                st.info("Balanced Data: Class distribution is relatively balanced. SMOTE may provide minor improvements.")
             else:
-                st.warning("⚠️ **SMOTE Disabled**: Training without synthetic data generation.")
+                st.warning("SMOTE Disabled: Training without synthetic data generation.")
         
         # Netflix style progress
         progress_container = st.empty()
@@ -722,7 +720,7 @@ class NetflixModelTrainer:
                     
                     # Show SMOTE effect
                     if i == 0:  # Only show for first model to avoid repetition
-                        st.info(f"📊 **SMOTE Effect**: Increased training samples from {len(X_train)} to {len(X_train_resampled)}")
+                        st.info(f"SMOTE Effect: Increased training samples from {len(X_train)} to {len(X_train_resampled)}")
                     
                     X_train_final, y_train_final = X_train_resampled, y_train_resampled
                 else:
@@ -795,7 +793,7 @@ class FactCheckVisualizer:
                 <div style="color: #888; font-size: 0.8rem;">{claim_date}</div>
             </div>
             <div style="margin-top: 0.5rem;">
-                <a href="{review_url}" target="_blank" style="color: #4285F4; text-decoration: none;">🔗 View Full Review</a>
+                <a href="{review_url}" target="_blank" style="color: #4285F4; text-decoration: none;">View Full Review</a>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -865,8 +863,7 @@ class NetflixVisualizer:
         
         for model_name, result in results.items():
             if 'error' not in result:
-                clean_name = model_name.replace('🎬 ', '').replace('🌲 ', '').replace('⚡ ', '').replace('📊 ', '')
-                models.append(clean_name)
+                models.append(model_name)
                 metrics_data['Accuracy'].append(result['accuracy'])
                 metrics_data['Precision'].append(result['precision'])
                 metrics_data['Recall'].append(result['recall'])
@@ -878,7 +875,7 @@ class NetflixVisualizer:
         # Accuracy
         bars1 = ax1.bar(models, metrics_data['Accuracy'], color=colors, alpha=0.9, edgecolor='white', linewidth=2)
         ax1.set_facecolor('#141414')
-        ax1.set_title('🎯 Accuracy' + (' (with SMOTE)' if any(smote_status) else ''), 
+        ax1.set_title('Accuracy' + (' (with SMOTE)' if any(smote_status) else ''), 
                      fontweight='bold', color='white', fontsize=14, pad=20)
         ax1.set_ylabel('Score', fontweight='bold', color='white')
         ax1.tick_params(axis='x', rotation=45, colors='white')
@@ -893,7 +890,7 @@ class NetflixVisualizer:
         # Precision
         bars2 = ax2.bar(models, metrics_data['Precision'], color=colors, alpha=0.9, edgecolor='white', linewidth=2)
         ax2.set_facecolor('#141414')
-        ax2.set_title('📊 Precision', fontweight='bold', color='white', fontsize=14, pad=20)
+        ax2.set_title('Precision', fontweight='bold', color='white', fontsize=14, pad=20)
         ax2.set_ylabel('Score', fontweight='bold', color='white')
         ax2.tick_params(axis='x', rotation=45, colors='white')
         ax2.tick_params(axis='y', colors='white')
@@ -907,7 +904,7 @@ class NetflixVisualizer:
         # Recall
         bars3 = ax3.bar(models, metrics_data['Recall'], color=colors, alpha=0.9, edgecolor='white', linewidth=2)
         ax3.set_facecolor('#141414')
-        ax3.set_title('🔍 Recall', fontweight='bold', color='white', fontsize=14, pad=20)
+        ax3.set_title('Recall', fontweight='bold', color='white', fontsize=14, pad=20)
         ax3.set_ylabel('Score', fontweight='bold', color='white')
         ax3.tick_params(axis='x', rotation=45, colors='white')
         ax3.tick_params(axis='y', colors='white')
@@ -921,7 +918,7 @@ class NetflixVisualizer:
         # F1-Score
         bars4 = ax4.bar(models, metrics_data['F1-Score'], color=colors, alpha=0.9, edgecolor='white', linewidth=2)
         ax4.set_facecolor('#141414')
-        ax4.set_title('⚡ F1-Score', fontweight='bold', color='white', fontsize=14, pad=20)
+        ax4.set_title('F1-Score', fontweight='bold', color='white', fontsize=14, pad=20)
         ax4.set_ylabel('Score', fontweight='bold', color='white')
         ax4.tick_params(axis='x', rotation=45, colors='white')
         ax4.tick_params(axis='y', colors='white')
@@ -948,10 +945,10 @@ class NetflixVisualizer:
 # ============================
 def setup_sidebar():
     """Setup Netflix-style sidebar"""
-    st.sidebar.markdown("<div class='sidebar-header'>🔍 NLP ANALYZER PRO</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div class='sidebar-header'>NLP ANALYZER PRO</div>", unsafe_allow_html=True)
     st.sidebar.markdown("---")
     
-    st.sidebar.markdown("<div class='sidebar-header'>📁 UPLOAD DATA</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div class='sidebar-header'>UPLOAD DATA</div>", unsafe_allow_html=True)
     
     uploaded_file = st.sidebar.file_uploader(
         "Choose CSV File",
@@ -960,7 +957,7 @@ def setup_sidebar():
     )
     
     # SMOTE Configuration
-    st.sidebar.markdown("<div class='sidebar-header'>⚙️ ADVANCED SETTINGS</div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div class='sidebar-header'>ADVANCED SETTINGS</div>", unsafe_allow_html=True)
     
     use_smote = st.sidebar.checkbox(
         "Enable SMOTE", 
@@ -991,9 +988,9 @@ def setup_sidebar():
             st.session_state.enable_fact_check = enable_fact_check
             st.session_state.max_fact_checks = max_fact_checks
             
-            st.sidebar.success(f"✅ Loaded: {df.shape[0]} rows")
+            st.sidebar.success(f"Loaded: {df.shape[0]} rows")
             
-            st.sidebar.markdown("<div class='sidebar-header'>⚙️ ANALYSIS SETUP</div>", unsafe_allow_html=True)
+            st.sidebar.markdown("<div class='sidebar-header'>ANALYSIS SETUP</div>", unsafe_allow_html=True)
             
             text_col = st.sidebar.selectbox(
                 "Text Column",
@@ -1019,7 +1016,7 @@ def setup_sidebar():
                 'feature_type': feature_type
             }
             
-            if st.sidebar.button("🚀 START ANALYSIS", use_container_width=True):
+            if st.sidebar.button("START ANALYSIS", use_container_width=True):
                 st.session_state.analyze_clicked = True
             else:
                 st.session_state.analyze_clicked = False
@@ -1031,31 +1028,61 @@ def setup_sidebar():
         st.session_state.analyze_clicked = False
 
 # ============================
-# Fact Check Section
+# Fact Check Section - FIXED VERSION
 # ============================
 def show_fact_check_section(df, config, max_checks=3):
-    """Display fact-checking results section"""
-    st.markdown("<div class='section-header fact-check-header'>🔍 FACT CHECK ANALYSIS</div>", unsafe_allow_html=True)
+    """Display fact-checking results section - FIXED VERSION"""
+    st.markdown("<div class='section-header fact-check-header'>FACT CHECK ANALYSIS</div>", unsafe_allow_html=True)
     
     # Initialize Fact Check API
     fact_checker = GoogleFactCheckAPI()
     
+    # Debug: Show API key status
+    with st.expander("API Status Debug", expanded=False):
+        if fact_checker.api_key:
+            st.success(f"API Key Found: {fact_checker.api_key[:10]}...{fact_checker.api_key[-4:]}")
+            
+            # Test API connection
+            if st.button("Test API Connection"):
+                test_result = fact_checker.search_claims("test", max_claims=1)
+                if "error" in test_result:
+                    st.error(f"API Test Failed: {test_result['error']}")
+                else:
+                    st.success("API Connection Successful!")
+        else:
+            st.error("No API Key Found")
+            st.info("""
+            **To fix this:**
+            
+            1. **Create `.streamlit/secrets.toml` file in your project root**
+            ```
+            # .streamlit/secrets.toml
+            GOOGLE_FACT_CHECK_API_KEY = "your_actual_api_key_here"
+            ```
+            
+            2. **File structure should be:**
+            ```
+            your_project/
+            ├── nlp_analyzer.py
+            ├── requirements.txt
+            └── .streamlit/
+                └── secrets.toml    ← Create this file
+            ```
+            
+            3. **Get API key from:** https://console.cloud.google.com/
+            """)
+    
     if not fact_checker.api_key:
         st.warning("""
-        ⚠️ **Google Fact Check API key not configured**
+        Google Fact Check API key not configured
         
-        To enable fact-checking, please:
-        1. Get an API key from [Google Cloud Console](https://console.cloud.google.com/)
-        2. Add it to your Streamlit secrets or environment variables
-        3. Enable the Fact Check API for your project
-        
-        For now, showing sample fact-check data.
+        Fact-checking requires a valid API key. Showing sample data instead.
         """)
         show_sample_fact_checks()
         return
     
     # Select texts for fact-checking
-    st.markdown("#### 📝 SELECT TEXTS FOR FACT CHECKING")
+    st.markdown("#### SELECT TEXTS FOR FACT CHECKING")
     
     texts = df[config['text_col']].astype(str).tolist()
     
@@ -1070,8 +1097,8 @@ def show_fact_check_section(df, config, max_checks=3):
     
     texts_to_check = texts[:num_texts_to_check]
     
-    if st.button("🔍 START FACT CHECK", use_container_width=True, key="fact_check_btn"):
-        with st.spinner("🔍 Fact-checking texts with Google Fact Check API..."):
+    if st.button("START FACT CHECK", use_container_width=True, key="fact_check_btn"):
+        with st.spinner("Fact-checking texts with Google Fact Check API..."):
             fact_check_results = fact_checker.batch_fact_check(texts_to_check, max_checks)
         
         # Display results
@@ -1079,7 +1106,7 @@ def show_fact_check_section(df, config, max_checks=3):
 
 def show_sample_fact_checks():
     """Display sample fact-check data when API is not available"""
-    st.info("📋 **Sample Fact-Check Results** (API not configured)")
+    st.info("Sample Fact-Check Results (API not configured)")
     
     sample_claims = [
         {
@@ -1119,7 +1146,7 @@ def display_fact_check_results(fact_check_results, fact_checker):
     FactCheckVisualizer.create_fact_check_summary(fact_check_results)
     
     # Detailed results
-    st.markdown("#### 📊 DETAILED FACT CHECK RESULTS")
+    st.markdown("#### DETAILED FACT CHECK RESULTS")
     
     for i, result in enumerate(fact_check_results):
         with st.expander(f"Text {i+1}: {result['text'][:100]}...", expanded=False):
@@ -1147,10 +1174,10 @@ def main_content():
             <h1 style='color: #e50914; font-size: 4rem; font-weight: 900; margin: 0; text-shadow: 3px 3px 6px rgba(0,0,0,0.5);'>NLP ANALYZER PRO</h1>
             <p style='color: #f5f5f1; font-size: 1.3rem; margin: 0.5rem 0 0 0;'>Advanced Text Intelligence Platform</p>
             <div style='margin-top: 1rem;'>
-                <span class="feature-tag">🤖 4 ML Algorithms</span>
-                <span class="feature-tag">🔧 SMOTE Enabled</span>
-                <span class="feature-tag fact-check-tag">🔍 Fact Check API</span>
-                <span class="feature-tag">🎯 Pragmatic Analysis</span>
+                <span class="feature-tag">4 ML Algorithms</span>
+                <span class="feature-tag">SMOTE Enabled</span>
+                <span class="feature-tag fact-check-tag">Fact Check API</span>
+                <span class="feature-tag">Pragmatic Analysis</span>
             </div>
         </div>
     </div>
@@ -1167,7 +1194,7 @@ def main_content():
     max_fact_checks = st.session_state.get('max_fact_checks', 3)
     
     # Dataset Overview
-    st.markdown("<div class='section-header'>📊 DATASET OVERVIEW</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-header'>DATASET OVERVIEW</div>", unsafe_allow_html=True)
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -1205,7 +1232,6 @@ def main_content():
         st.markdown("""
         <div class="netflix-card">
             <div style="display: flex; align-items: center;">
-                <span style="font-size: 2rem; margin-right: 1rem;">🔧</span>
                 <div>
                     <h3 style="color: #e50914; margin: 0;">SMOTE ENABLED</h3>
                     <p style="color: #f5f5f1; margin: 0;">Synthetic Minority Over-sampling Technique active for handling class imbalance</p>
@@ -1219,7 +1245,6 @@ def main_content():
         st.markdown("""
         <div class="fact-check-card">
             <div style="display: flex; align-items: center;">
-                <span style="font-size: 2rem; margin-right: 1rem;">🔍</span>
                 <div>
                     <h3 style="color: #4285F4; margin: 0;">FACT CHECK ENABLED</h3>
                     <p style="color: #f5f5f1; margin: 0;">Google Fact Check API integration active for claim verification</p>
@@ -1229,8 +1254,8 @@ def main_content():
         """, unsafe_allow_html=True)
     
     # Data Preview
-    with st.expander("🎬 DATA PREVIEW", expanded=True):
-        tab1, tab2 = st.tabs(["📋 First 10 Rows", "📈 Statistics"])
+    with st.expander("DATA PREVIEW", expanded=True):
+        tab1, tab2 = st.tabs(["First 10 Rows", "Statistics"])
         with tab1:
             st.dataframe(df.head(10), use_container_width=True)
         with tab2:
@@ -1255,22 +1280,22 @@ def show_netflix_welcome():
             Upload your CSV file to unlock powerful text analysis capabilities
         </p>
         <div style='display: inline-flex; gap: 1rem; flex-wrap: wrap; justify-content: center;'>
-            <span class="feature-tag">🤖 4 ML Algorithms</span>
-            <span class="feature-tag">🔧 SMOTE Enabled</span>
-            <span class="feature-tag fact-check-tag">🔍 Fact Check API</span>
-            <span class="feature-tag">🎯 Pragmatic Analysis</span>
-            <span class="feature-tag">📊 Real-time Analytics</span>
+            <span class="feature-tag">4 ML Algorithms</span>
+            <span class="feature-tag">SMOTE Enabled</span>
+            <span class="feature-tag fact-check-tag">Fact Check API</span>
+            <span class="feature-tag">Pragmatic Analysis</span>
+            <span class="feature-tag">Real-time Analytics</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("<div class='section-header'>✨ HOW IT WORKS</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-header'>HOW IT WORKS</div>", unsafe_allow_html=True)
     
     steps = [
-        {"icon": "1️⃣", "title": "UPLOAD DATA", "desc": "Use the sidebar to upload your CSV file with text data"},
-        {"icon": "2️⃣", "title": "CONFIGURE", "desc": "Select text columns, target variables, and enable features"},
-        {"icon": "3️⃣", "title": "ANALYZE", "desc": "Watch as our algorithms process your data with advanced features"},
-        {"icon": "4️⃣", "title": "VERIFY", "desc": "Get fact-checked insights with Google Fact Check API"}
+        {"icon": "1", "title": "UPLOAD DATA", "desc": "Use the sidebar to upload your CSV file with text data"},
+        {"icon": "2", "title": "CONFIGURE", "desc": "Select text columns, target variables, and enable features"},
+        {"icon": "3", "title": "ANALYZE", "desc": "Watch as our algorithms process your data with advanced features"},
+        {"icon": "4", "title": "VERIFY", "desc": "Get fact-checked insights with Google Fact Check API"}
     ]
     
     cols = st.columns(4)
@@ -1284,15 +1309,15 @@ def show_netflix_welcome():
             </div>
             """, unsafe_allow_html=True)
     
-    st.markdown("<div class='section-header'>🎯 FEATURE HIGHLIGHTS</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-header'>FEATURE HIGHLIGHTS</div>", unsafe_allow_html=True)
     
     features = [
-        {"icon": "📖", "title": "LEXICAL ANALYSIS", "desc": "Advanced word-level processing and lemmatization"},
-        {"icon": "🎭", "title": "SEMANTIC INTELLIGENCE", "desc": "Sentiment analysis and meaning extraction"},
-        {"icon": "🔧", "title": "SMOTE BALANCING", "desc": "Automatic class imbalance handling for better accuracy"},
-        {"icon": "🔍", "title": "FACT CHECK API", "desc": "Google Fact Check integration for claim verification"},
-        {"icon": "🔧", "title": "SYNTACTIC PROCESSING", "desc": "Grammar structure and POS analysis"},
-        {"icon": "🎯", "title": "PRAGMATIC CONTEXT", "desc": "Intent detection and modality analysis"}
+        {"icon": "A", "title": "LEXICAL ANALYSIS", "desc": "Advanced word-level processing and lemmatization"},
+        {"icon": "B", "title": "SEMANTIC INTELLIGENCE", "desc": "Sentiment analysis and meaning extraction"},
+        {"icon": "C", "title": "SMOTE BALANCING", "desc": "Automatic class imbalance handling for better accuracy"},
+        {"icon": "D", "title": "FACT CHECK API", "desc": "Google Fact Check integration for claim verification"},
+        {"icon": "E", "title": "SYNTACTIC PROCESSING", "desc": "Grammar structure and POS analysis"},
+        {"icon": "F", "title": "PRAGMATIC CONTEXT", "desc": "Intent detection and modality analysis"}
     ]
     
     cols = st.columns(2)
@@ -1310,7 +1335,7 @@ def show_netflix_welcome():
 
 def perform_netflix_analysis(df, config, use_smote):
     """Perform Netflix-style analysis with SMOTE"""
-    st.markdown("<div class='section-header'>📈 ANALYSIS RESULTS</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-header'>ANALYSIS RESULTS</div>", unsafe_allow_html=True)
     
     # Data validation
     if config['text_col'] not in df.columns or config['target_col'] not in df.columns:
@@ -1329,7 +1354,7 @@ def perform_netflix_analysis(df, config, use_smote):
         return
     
     # Feature extraction
-    with st.spinner("🎬 Extracting features..."):
+    with st.spinner("Extracting features..."):
         extractor = NetflixFeatureExtractor()
         X = df[config['text_col']].astype(str)
         y = df[config['target_col']]
@@ -1347,10 +1372,10 @@ def perform_netflix_analysis(df, config, use_smote):
             X_features = extractor.extract_pragmatic_features(X)
             feature_desc = "Context analysis and intent detection"
     
-    st.success(f"✅ Feature extraction completed: {feature_desc}")
+    st.success(f"Feature extraction completed: {feature_desc}")
     
     # Model training with SMOTE
-    with st.spinner("🤖 Training machine learning models with SMOTE..."):
+    with st.spinner("Training machine learning models with SMOTE..."):
         trainer = NetflixModelTrainer(use_smote=use_smote)
         results, label_encoder = trainer.train_and_evaluate(X_features, y)
     
@@ -1359,7 +1384,7 @@ def perform_netflix_analysis(df, config, use_smote):
     
     if successful_models:
         # Model Performance Cards
-        st.markdown("#### 🎯 MODEL PERFORMANCE")
+        st.markdown("#### MODEL PERFORMANCE")
         
         cols = st.columns(len(successful_models))
         for idx, (model_name, result) in enumerate(successful_models.items()):
@@ -1393,7 +1418,7 @@ def perform_netflix_analysis(df, config, use_smote):
                 """, unsafe_allow_html=True)
         
         # Netflix Style Dashboard
-        st.markdown("#### 📊 PERFORMANCE DASHBOARD")
+        st.markdown("#### PERFORMANCE DASHBOARD")
         viz = NetflixVisualizer()
         dashboard_fig = viz.create_performance_dashboard(successful_models)
         st.pyplot(dashboard_fig)
@@ -1404,7 +1429,7 @@ def perform_netflix_analysis(df, config, use_smote):
         
         st.markdown(f"""
         <div class="netflix-card">
-            <h3 style="color: #e50914; margin-bottom: 1rem;">🎬 RECOMMENDED MODEL</h3>
+            <h3 style="color: #e50914; margin-bottom: 1rem;">RECOMMENDED MODEL</h3>
             <p style="color: white; font-size: 1.2rem;">
                 <strong>{best_model[0]}</strong>{smote_status} achieved the highest accuracy of 
                 <strong style="color: #e50914;">{best_model[1]['accuracy']:.1%}</strong>
@@ -1418,7 +1443,7 @@ def perform_netflix_analysis(df, config, use_smote):
         
         # SMOTE Impact Analysis
         if use_smote and any(result.get('smote_applied', False) for result in successful_models.values()):
-            st.markdown("#### 🔧 SMOTE IMPACT ANALYSIS")
+            st.markdown("#### SMOTE IMPACT ANALYSIS")
             st.info("""
             **SMOTE (Synthetic Minority Over-sampling Technique)** helps improve model performance by:
             - Generating synthetic samples for minority classes
@@ -1428,7 +1453,7 @@ def perform_netflix_analysis(df, config, use_smote):
             """)
     
     else:
-        st.error("❌ No models were successfully trained. Please check your data and configuration.")
+        st.error("No models were successfully trained. Please check your data and configuration.")
 
 # ============================
 # Main Application
