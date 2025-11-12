@@ -436,7 +436,7 @@ class GoogleFactCheckAPI:
         self.api_key = "AIzaSyCwmEJRN5-usSuxg-d71Qjpu5O4SjS4uVA"
         
         # If the key is still the placeholder, try to get from environment as fallback
-        if self.api_key == "YOUR_GOOGLE_FACT_CHECK_API_KEY_HERE":
+        if self.api_key == "AIzaSyCwmEJRN5-usSuxg-d71Qjpu5O4SjS4uVA":
             try:
                 env_key = os.environ.get("GOOGLE_FACT_CHECK_API_KEY")
                 if env_key:
