@@ -11,6 +11,7 @@ from textblob import TextBlob
 import requests
 import json
 import time
+import os
 from datetime import datetime
 
 from sklearn.model_selection import train_test_split
@@ -427,35 +428,61 @@ nlp = load_nlp_model()
 stop_words = STOP_WORDS
 
 # ============================
-# Google Fact Check API Integration - FIXED VERSION
+# Google Fact Check API Integration - IMPROVED VERSION
 # ============================
 class GoogleFactCheckAPI:
     def __init__(self, api_key=None):
         # Try multiple sources for API key with proper error handling
         self.api_key = None
         
-        # Method 1: Direct parameter
-        if api_key and api_key.strip():
+        # Method 1: Direct parameter (highest priority)
+        if api_key and api_key.strip() and api_key.strip() != "your_actual_api_key_here":
             self.api_key = api_key.strip()
+            st.success("API key loaded from direct parameter")
         
-        # Method 2: Streamlit secrets (primary method)
-        elif hasattr(st, 'secrets'):
-            try:
-                secrets_api_key = st.secrets.get("GOOGLE_FACT_CHECK_API_KEY", "")
-                if secrets_api_key and secrets_api_key.strip():
-                    self.api_key = secrets_api_key.strip()
-            except Exception:
-                pass
-        
-        # Method 3: Environment variable (fallback)
+        # Method 2: Streamlit secrets
         if not self.api_key:
             try:
-                import os
-                env_api_key = os.environ.get("GOOGLE_FACT_CHECK_API_KEY", "")
-                if env_api_key and env_api_key.strip():
+                # Check if secrets module exists and has the key
+                if hasattr(st, 'secrets'):
+                    secrets_dict = st.secrets
+                    if isinstance(secrets_dict, dict) and 'GOOGLE_FACT_CHECK_API_KEY' in secrets_dict:
+                        secrets_api_key = secrets_dict['GOOGLE_FACT_CHECK_API_KEY']
+                        if secrets_api_key and secrets_api_key.strip() and secrets_api_key.strip() != "your_actual_api_key_here":
+                            self.api_key = secrets_api_key.strip()
+                            st.success("API key loaded from Streamlit secrets")
+            except Exception as e:
+                st.warning(f"Could not load from Streamlit secrets: {e}")
+        
+        # Method 3: Environment variable
+        if not self.api_key:
+            try:
+                env_api_key = os.environ.get("GOOGLE_FACT_CHECK_API_KEY")
+                if env_api_key and env_api_key.strip() and env_api_key.strip() != "your_actual_api_key_here":
                     self.api_key = env_api_key.strip()
-            except Exception:
-                pass
+                    st.success("API key loaded from environment variable")
+            except Exception as e:
+                st.warning(f"Could not load from environment: {e}")
+        
+        # Method 4: Manual input in sidebar
+        if not self.api_key:
+            st.sidebar.markdown("---")
+            st.sidebar.markdown("<div class='sidebar-header'>FACT CHECK API SETUP</div>", unsafe_allow_html=True)
+            manual_api_key = st.sidebar.text_input(
+                "Enter Google Fact Check API Key",
+                type="password",
+                help="Get your API key from https://console.cloud.google.com/"
+            )
+            if manual_api_key and manual_api_key.strip() and manual_api_key.strip() != "your_actual_api_key_here":
+                self.api_key = manual_api_key.strip()
+                st.sidebar.success("API key loaded from manual input")
+                # Optionally save to session state for persistence
+                st.session_state.manual_api_key = self.api_key
+        
+        # Method 5: Check session state for previously entered key
+        if not self.api_key and 'manual_api_key' in st.session_state:
+            self.api_key = st.session_state.manual_api_key
+            st.success("API key loaded from session")
         
         self.base_url = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
         
@@ -1028,56 +1055,52 @@ def setup_sidebar():
         st.session_state.analyze_clicked = False
 
 # ============================
-# Fact Check Section - FIXED VERSION
+# Fact Check Section - IMPROVED VERSION
 # ============================
 def show_fact_check_section(df, config, max_checks=3):
-    """Display fact-checking results section - FIXED VERSION"""
+    """Display fact-checking results section - IMPROVED VERSION"""
     st.markdown("<div class='section-header fact-check-header'>FACT CHECK ANALYSIS</div>", unsafe_allow_html=True)
     
     # Initialize Fact Check API
     fact_checker = GoogleFactCheckAPI()
     
-    # Debug: Show API key status
-    with st.expander("API Status Debug", expanded=False):
-        if fact_checker.api_key:
-            st.success(f"API Key Found: {fact_checker.api_key[:10]}...{fact_checker.api_key[-4:]}")
-            
-            # Test API connection
-            if st.button("Test API Connection"):
-                test_result = fact_checker.search_claims("test", max_claims=1)
+    # Show API key status
+    if fact_checker.api_key:
+        st.success(f"API Key Status: Loaded successfully (key: {fact_checker.api_key[:10]}...{fact_checker.api_key[-4:]})")
+        
+        # Test API connection
+        if st.button("Test API Connection"):
+            with st.spinner("Testing API connection..."):
+                test_result = fact_checker.search_claims("climate change", max_claims=1)
                 if "error" in test_result:
                     st.error(f"API Test Failed: {test_result['error']}")
                 else:
-                    st.success("API Connection Successful!")
-        else:
-            st.error("No API Key Found")
-            st.info("""
-            **To fix this:**
-            
-            1. **Create `.streamlit/secrets.toml` file in your project root**
-            ```
-            # .streamlit/secrets.toml
-            GOOGLE_FACT_CHECK_API_KEY = "your_actual_api_key_here"
-            ```
-            
-            2. **File structure should be:**
-            ```
-            your_project/
-            ├── nlp_analyzer.py
-            ├── requirements.txt
-            └── .streamlit/
-                └── secrets.toml    ← Create this file
-            ```
-            
-            3. **Get API key from:** https://console.cloud.google.com/
-            """)
-    
-    if not fact_checker.api_key:
-        st.warning("""
-        Google Fact Check API key not configured
-        
-        Fact-checking requires a valid API key. Showing sample data instead.
+                    st.success("API Connection Successful! Fact Check API is working properly.")
+    else:
+        st.error("No API Key Found")
+        st.info("""
+        **To use Google Fact Check API:**
+
+        1. **Get an API key from Google Cloud Console:**
+           - Go to https://console.cloud.google.com/
+           - Create a new project or select existing one
+           - Enable "Fact Check Tools API"
+           - Create credentials (API Key)
+
+        2. **Add your API key using any of these methods:**
+
+           **Method A: Manual Input (Easiest)**
+           - Enter your API key in the sidebar under "FACT CHECK API SETUP"
+
+           **Method B: Streamlit Secrets (Recommended for deployment)**
+           - Create `.streamlit/secrets.toml` file in your project root
+           - Add: `GOOGLE_FACT_CHECK_API_KEY = "your_actual_api_key_here"`
+
+           **Method C: Environment Variable**
+           - Set environment variable: `GOOGLE_FACT_CHECK_API_KEY=your_key`
         """)
+        
+        st.warning("Showing sample fact-check data instead of real API results.")
         show_sample_fact_checks()
         return
     
