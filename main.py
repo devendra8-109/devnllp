@@ -1,5 +1,5 @@
 # ============================================
-# 🎬 NLP Analysis Suite with SMOTE
+# 🎬 NLP Analysis Suite with SMOTE & Fact Check
 # ============================================
 
 import streamlit as st
@@ -8,6 +8,10 @@ import numpy as np
 import spacy
 from spacy.lang.en.stop_words import STOP_WORDS
 from textblob import TextBlob
+import requests
+import json
+import time
+from datetime import datetime
 
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
@@ -18,7 +22,6 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from sklearn.preprocessing import LabelEncoder
 from imblearn.over_sampling import SMOTE
-from imblearn.pipeline import Pipeline as ImbPipeline
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -47,6 +50,10 @@ st.markdown("""
         --netflix-light: #f5f5f1;
         --netflix-white: #ffffff;
         --netflix-card: #181818;
+        --fact-check-blue: #4285F4;
+        --fact-check-green: #34A853;
+        --fact-check-yellow: #FBBC05;
+        --fact-check-red: #EA4335;
     }
     
     /* Main background */
@@ -90,6 +97,31 @@ st.markdown("""
         background: var(--netflix-red);
     }
     
+    /* Fact Check Cards */
+    .fact-check-card {
+        background: var(--netflix-card);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border: 1px solid rgba(66, 133, 244, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .fact-check-card:hover {
+        border-color: var(--fact-check-blue);
+        box-shadow: 0 8px 25px rgba(66, 133, 244, 0.3);
+    }
+    
+    .fact-check-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--fact-check-blue);
+    }
+    
     /* Metric Cards */
     .metric-card {
         background: linear-gradient(135deg, var(--netflix-red) 0%, #b20710 100%);
@@ -100,6 +132,11 @@ st.markdown("""
         margin: 0.5rem;
         border: none;
         box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4);
+    }
+    
+    .fact-check-metric {
+        background: linear-gradient(135deg, var(--fact-check-blue) 0%, #3367D6 100%);
+        box-shadow: 0 4px 15px rgba(66, 133, 244, 0.4);
     }
     
     .metric-value {
@@ -124,6 +161,10 @@ st.markdown("""
         padding-left: 1rem;
         border-left: 4px solid var(--netflix-red);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    
+    .fact-check-header {
+        border-left: 4px solid var(--fact-check-blue);
     }
     
     /* Sidebar - Netflix Style */
@@ -160,6 +201,15 @@ st.markdown("""
         background: #b20710;
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(229, 9, 20, 0.4);
+    }
+    
+    .fact-check-button {
+        background: var(--fact-check-blue) !important;
+    }
+    
+    .fact-check-button:hover {
+        background: #3367D6 !important;
+        box-shadow: 0 5px 15px rgba(66, 133, 244, 0.4) !important;
     }
     
     /* Select boxes and inputs */
@@ -280,6 +330,12 @@ st.markdown("""
         border: 1px solid rgba(229, 9, 20, 0.3);
     }
     
+    .fact-check-tag {
+        background: rgba(66, 133, 244, 0.2);
+        color: var(--fact-check-blue);
+        border: 1px solid rgba(66, 133, 244, 0.3);
+    }
+    
     /* SMOTE Badge */
     .smote-badge {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -290,6 +346,91 @@ st.markdown("""
         font-weight: 600;
         margin-left: 0.5rem;
         display: inline-block;
+    }
+    
+    /* Fact Check Rating Badges */
+    .rating-true {
+        background: var(--fact-check-green);
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    
+    .rating-false {
+        background: var(--fact-check-red);
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    
+    .rating-mixed {
+        background: var(--fact-check-yellow);
+        color: black;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    
+    .rating-unknown {
+        background: var(--netflix-gray);
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    
+    /* Claim Cards */
+    .claim-card {
+        background: rgba(66, 133, 244, 0.1);
+        border: 1px solid rgba(66, 133, 244, 0.3);
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+    }
+    
+    .claim-text {
+        color: #f5f5f1;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        margin-bottom: 0.5rem;
+    }
+    
+    .claim-rating {
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    /* Confidence Meter */
+    .confidence-meter {
+        background: var(--netflix-gray);
+        border-radius: 10px;
+        height: 8px;
+        margin: 0.5rem 0;
+        overflow: hidden;
+    }
+    
+    .confidence-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+    
+    .confidence-high {
+        background: var(--fact-check-green);
+    }
+    
+    .confidence-medium {
+        background: var(--fact-check-yellow);
+    }
+    
+    .confidence-low {
+        background: var(--fact-check-red);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -311,6 +452,90 @@ def load_nlp_model():
 
 nlp = load_nlp_model()
 stop_words = STOP_WORDS
+
+# ============================
+# Google Fact Check API Integration
+# ============================
+class GoogleFactCheckAPI:
+    def __init__(self, api_key=None):
+        self.api_key = api_key or st.secrets.get("GOOGLE_FACT_CHECK_API_KEY", "")
+        self.base_url = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
+        
+    def search_claims(self, query, language_code="en", max_claims=10, page_size=10):
+        """Search for fact-checked claims using Google Fact Check API"""
+        if not self.api_key:
+            return {"error": "API key not configured"}
+        
+        params = {
+            "key": self.api_key,
+            "query": query,
+            "languageCode": language_code,
+            "pageSize": min(page_size, max_claims)
+        }
+        
+        try:
+            response = requests.get(self.base_url, params=params, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {"error": f"API request failed: {str(e)}"}
+        except json.JSONDecodeError as e:
+            return {"error": f"JSON decode error: {str(e)}"}
+    
+    def extract_key_phrases(self, text, max_phrases=5):
+        """Extract key phrases from text for fact-checking"""
+        doc = nlp(text)
+        phrases = []
+        
+        # Extract noun phrases and named entities
+        for chunk in doc.noun_chunks:
+            if len(chunk.text.split()) >= 2 and len(chunk.text) > 10:
+                phrases.append(chunk.text)
+        
+        for ent in doc.ents:
+            if ent.label_ in ["PERSON", "ORG", "GPE", "EVENT"] and len(ent.text) > 5:
+                phrases.append(ent.text)
+        
+        # Remove duplicates and return top phrases
+        unique_phrases = list(dict.fromkeys(phrases))
+        return unique_phrases[:max_phrases]
+    
+    def batch_fact_check(self, texts, max_checks_per_text=3):
+        """Perform fact-checking on multiple texts"""
+        results = []
+        
+        for text in texts:
+            text_results = self.fact_check_single_text(text, max_checks_per_text)
+            results.append({
+                "text": text,
+                "fact_check_results": text_results,
+                "has_claims": len(text_results) > 0,
+                "claim_count": len(text_results)
+            })
+            
+            # Rate limiting to be respectful to API
+            time.sleep(0.5)
+        
+        return results
+    
+    def fact_check_single_text(self, text, max_checks=3):
+        """Fact-check a single text by searching for key phrases"""
+        key_phrases = self.extract_key_phrases(text)
+        all_claims = []
+        
+        for phrase in key_phrases:
+            if len(phrase) > 10:  # Only check substantial phrases
+                result = self.search_claims(phrase, max_claims=max_checks)
+                
+                if "claims" in result:
+                    for claim in result["claims"]:
+                        claim["search_phrase"] = phrase
+                        all_claims.append(claim)
+                
+                if len(all_claims) >= max_checks:
+                    break
+        
+        return all_claims[:max_checks]
 
 # ============================
 # Feature Engineering Classes
@@ -534,6 +759,93 @@ class NetflixModelTrainer:
         return results, le
 
 # ============================
+# Fact Check Visualization
+# ============================
+class FactCheckVisualizer:
+    @staticmethod
+    def display_claim_analysis(claim):
+        """Display individual claim analysis in Netflix style"""
+        claim_text = claim.get('text', 'No text available')
+        review = claim.get('claimReview', [{}])[0] if claim.get('claimReview') else {}
+        
+        # Get rating
+        rating = review.get('textualRating', 'Unknown').lower()
+        publisher = review.get('publisher', {}).get('name', 'Unknown Publisher')
+        review_url = review.get('url', '#')
+        claim_date = claim.get('claimDate', 'Unknown date')
+        
+        # Determine rating badge
+        if 'true' in rating or 'correct' in rating:
+            rating_badge = '<span class="rating-true">TRUE</span>'
+        elif 'false' in rating or 'incorrect' in rating:
+            rating_badge = '<span class="rating-false">FALSE</span>'
+        elif 'mixed' in rating or 'partially' in rating:
+            rating_badge = '<span class="rating-mixed">MIXED</span>'
+        else:
+            rating_badge = '<span class="rating-unknown">UNKNOWN</span>'
+        
+        st.markdown(f"""
+        <div class="claim-card">
+            <div class="claim-text"><strong>Claim:</strong> {claim_text}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <span class="claim-rating">Rating: {rating_badge}</span>
+                    <span style="color: #888; margin-left: 1rem;">By: {publisher}</span>
+                </div>
+                <div style="color: #888; font-size: 0.8rem;">{claim_date}</div>
+            </div>
+            <div style="margin-top: 0.5rem;">
+                <a href="{review_url}" target="_blank" style="color: #4285F4; text-decoration: none;">🔗 View Full Review</a>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    @staticmethod
+    def create_fact_check_summary(fact_check_results):
+        """Create summary visualization of fact-check results"""
+        if not fact_check_results:
+            st.info("No fact-check results available.")
+            return
+        
+        total_claims = sum(result['claim_count'] for result in fact_check_results)
+        texts_with_claims = sum(1 for result in fact_check_results if result['has_claims'])
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card fact-check-metric">
+                <div class="metric-value">{len(fact_check_results)}</div>
+                <div class="metric-label">TEXTS CHECKED</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f"""
+            <div class="metric-card fact-check-metric">
+                <div class="metric-value">{texts_with_claims}</div>
+                <div class="metric-label">TEXTS WITH CLAIMS</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown(f"""
+            <div class="metric-card fact-check-metric">
+                <div class="metric-value">{total_claims}</div>
+                <div class="metric-label">TOTAL CLAIMS</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            coverage_rate = (texts_with_claims / len(fact_check_results)) * 100 if fact_check_results else 0
+            st.markdown(f"""
+            <div class="metric-card fact-check-metric">
+                <div class="metric-value">{coverage_rate:.1f}%</div>
+                <div class="metric-label">COVERAGE RATE</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+# ============================
 # Netflix Style Visualizations
 # ============================
 class NetflixVisualizer:
@@ -656,12 +968,28 @@ def setup_sidebar():
         help="Use SMOTE to handle class imbalance (recommended for better accuracy)"
     )
     
+    enable_fact_check = st.sidebar.checkbox(
+        "Enable Fact Check", 
+        value=True,
+        help="Use Google Fact Check API to verify claims (requires API key)"
+    )
+    
+    max_fact_checks = st.sidebar.slider(
+        "Max Fact Checks per Text",
+        min_value=1,
+        max_value=10,
+        value=3,
+        help="Maximum number of fact checks to perform per text"
+    )
+    
     if uploaded_file is not None:
         try:
             df = pd.read_csv(uploaded_file)
             st.session_state.df = df
             st.session_state.file_uploaded = True
             st.session_state.use_smote = use_smote
+            st.session_state.enable_fact_check = enable_fact_check
+            st.session_state.max_fact_checks = max_fact_checks
             
             st.sidebar.success(f"✅ Loaded: {df.shape[0]} rows")
             
@@ -703,6 +1031,110 @@ def setup_sidebar():
         st.session_state.analyze_clicked = False
 
 # ============================
+# Fact Check Section
+# ============================
+def show_fact_check_section(df, config, max_checks=3):
+    """Display fact-checking results section"""
+    st.markdown("<div class='section-header fact-check-header'>🔍 FACT CHECK ANALYSIS</div>", unsafe_allow_html=True)
+    
+    # Initialize Fact Check API
+    fact_checker = GoogleFactCheckAPI()
+    
+    if not fact_checker.api_key:
+        st.warning("""
+        ⚠️ **Google Fact Check API key not configured**
+        
+        To enable fact-checking, please:
+        1. Get an API key from [Google Cloud Console](https://console.cloud.google.com/)
+        2. Add it to your Streamlit secrets or environment variables
+        3. Enable the Fact Check API for your project
+        
+        For now, showing sample fact-check data.
+        """)
+        show_sample_fact_checks()
+        return
+    
+    # Select texts for fact-checking
+    st.markdown("#### 📝 SELECT TEXTS FOR FACT CHECKING")
+    
+    texts = df[config['text_col']].astype(str).tolist()
+    
+    # Let user choose how many texts to check
+    num_texts_to_check = st.slider(
+        "Number of texts to fact-check",
+        min_value=1,
+        max_value=min(20, len(texts)),
+        value=min(5, len(texts)),
+        help="Fact-checking can take time, so limit the number of texts"
+    )
+    
+    texts_to_check = texts[:num_texts_to_check]
+    
+    if st.button("🔍 START FACT CHECK", use_container_width=True, key="fact_check_btn"):
+        with st.spinner("🔍 Fact-checking texts with Google Fact Check API..."):
+            fact_check_results = fact_checker.batch_fact_check(texts_to_check, max_checks)
+        
+        # Display results
+        display_fact_check_results(fact_check_results, fact_checker)
+
+def show_sample_fact_checks():
+    """Display sample fact-check data when API is not available"""
+    st.info("📋 **Sample Fact-Check Results** (API not configured)")
+    
+    sample_claims = [
+        {
+            "text": "Climate change is primarily caused by human activities",
+            "rating": "True",
+            "publisher": "Climate Fact Check",
+            "date": "2024-01-15"
+        },
+        {
+            "text": "Vaccines cause autism in children",
+            "rating": "False", 
+            "publisher": "Medical Facts Organization",
+            "date": "2024-01-10"
+        },
+        {
+            "text": "The Earth is flat",
+            "rating": "False",
+            "publisher": "Science Verification Network", 
+            "date": "2024-01-08"
+        }
+    ]
+    
+    for claim in sample_claims:
+        FactCheckVisualizer.display_claim_analysis({
+            'text': claim['text'],
+            'claimReview': [{
+                'textualRating': claim['rating'],
+                'publisher': {'name': claim['publisher']},
+                'url': '#'
+            }],
+            'claimDate': claim['date']
+        })
+
+def display_fact_check_results(fact_check_results, fact_checker):
+    """Display comprehensive fact-check results"""
+    # Summary metrics
+    FactCheckVisualizer.create_fact_check_summary(fact_check_results)
+    
+    # Detailed results
+    st.markdown("#### 📊 DETAILED FACT CHECK RESULTS")
+    
+    for i, result in enumerate(fact_check_results):
+        with st.expander(f"Text {i+1}: {result['text'][:100]}...", expanded=False):
+            st.markdown(f"**Original Text:** {result['text']}")
+            
+            if result['has_claims']:
+                st.markdown(f"**Found {result['claim_count']} verified claims:**")
+                for claim in result['fact_check_results']:
+                    FactCheckVisualizer.display_claim_analysis(claim)
+            else:
+                st.info("No verified claims found for this text.")
+        
+        st.markdown("---")
+
+# ============================
 # Main Content
 # ============================
 def main_content():
@@ -717,8 +1149,8 @@ def main_content():
             <div style='margin-top: 1rem;'>
                 <span class="feature-tag">🤖 4 ML Algorithms</span>
                 <span class="feature-tag">🔧 SMOTE Enabled</span>
+                <span class="feature-tag fact-check-tag">🔍 Fact Check API</span>
                 <span class="feature-tag">🎯 Pragmatic Analysis</span>
-                <span class="feature-tag">📊 Real-time Analytics</span>
             </div>
         </div>
     </div>
@@ -731,6 +1163,8 @@ def main_content():
     df = st.session_state.df
     config = st.session_state.get('config', {})
     use_smote = st.session_state.get('use_smote', True)
+    enable_fact_check = st.session_state.get('enable_fact_check', True)
+    max_fact_checks = st.session_state.get('max_fact_checks', 3)
     
     # Dataset Overview
     st.markdown("<div class='section-header'>📊 DATASET OVERVIEW</div>", unsafe_allow_html=True)
@@ -780,6 +1214,20 @@ def main_content():
         </div>
         """, unsafe_allow_html=True)
     
+    # Fact Check Status
+    if enable_fact_check:
+        st.markdown("""
+        <div class="fact-check-card">
+            <div style="display: flex; align-items: center;">
+                <span style="font-size: 2rem; margin-right: 1rem;">🔍</span>
+                <div>
+                    <h3 style="color: #4285F4; margin: 0;">FACT CHECK ENABLED</h3>
+                    <p style="color: #f5f5f1; margin: 0;">Google Fact Check API integration active for claim verification</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
     # Data Preview
     with st.expander("🎬 DATA PREVIEW", expanded=True):
         tab1, tab2 = st.tabs(["📋 First 10 Rows", "📈 Statistics"])
@@ -791,6 +1239,10 @@ def main_content():
     # Analysis Results
     if st.session_state.get('analyze_clicked', False):
         perform_netflix_analysis(df, config, use_smote)
+        
+        # Fact Check Section
+        if enable_fact_check:
+            show_fact_check_section(df, config, max_fact_checks)
 
 def show_netflix_welcome():
     """Netflix-style welcome screen"""
@@ -805,9 +1257,9 @@ def show_netflix_welcome():
         <div style='display: inline-flex; gap: 1rem; flex-wrap: wrap; justify-content: center;'>
             <span class="feature-tag">🤖 4 ML Algorithms</span>
             <span class="feature-tag">🔧 SMOTE Enabled</span>
+            <span class="feature-tag fact-check-tag">🔍 Fact Check API</span>
             <span class="feature-tag">🎯 Pragmatic Analysis</span>
             <span class="feature-tag">📊 Real-time Analytics</span>
-            <span class="feature-tag">⚡ Netflix Style</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -816,9 +1268,9 @@ def show_netflix_welcome():
     
     steps = [
         {"icon": "1️⃣", "title": "UPLOAD DATA", "desc": "Use the sidebar to upload your CSV file with text data"},
-        {"icon": "2️⃣", "title": "CONFIGURE", "desc": "Select text columns, target variables, and enable SMOTE"},
-        {"icon": "3️⃣", "title": "ANALYZE", "desc": "Watch as our algorithms process your data with class balancing"},
-        {"icon": "4️⃣", "title": "INSIGHTS", "desc": "Get professional insights with Netflix-style visualizations"}
+        {"icon": "2️⃣", "title": "CONFIGURE", "desc": "Select text columns, target variables, and enable features"},
+        {"icon": "3️⃣", "title": "ANALYZE", "desc": "Watch as our algorithms process your data with advanced features"},
+        {"icon": "4️⃣", "title": "VERIFY", "desc": "Get fact-checked insights with Google Fact Check API"}
     ]
     
     cols = st.columns(4)
@@ -838,9 +1290,9 @@ def show_netflix_welcome():
         {"icon": "📖", "title": "LEXICAL ANALYSIS", "desc": "Advanced word-level processing and lemmatization"},
         {"icon": "🎭", "title": "SEMANTIC INTELLIGENCE", "desc": "Sentiment analysis and meaning extraction"},
         {"icon": "🔧", "title": "SMOTE BALANCING", "desc": "Automatic class imbalance handling for better accuracy"},
+        {"icon": "🔍", "title": "FACT CHECK API", "desc": "Google Fact Check integration for claim verification"},
         {"icon": "🔧", "title": "SYNTACTIC PROCESSING", "desc": "Grammar structure and POS analysis"},
-        {"icon": "🎯", "title": "PRAGMATIC CONTEXT", "desc": "Intent detection and modality analysis"},
-        {"icon": "📊", "title": "ADVANCED METRICS", "desc": "Comprehensive performance evaluation"}
+        {"icon": "🎯", "title": "PRAGMATIC CONTEXT", "desc": "Intent detection and modality analysis"}
     ]
     
     cols = st.columns(2)
@@ -989,6 +1441,10 @@ def main():
         st.session_state.analyze_clicked = False
     if 'use_smote' not in st.session_state:
         st.session_state.use_smote = True
+    if 'enable_fact_check' not in st.session_state:
+        st.session_state.enable_fact_check = True
+    if 'max_fact_checks' not in st.session_state:
+        st.session_state.max_fact_checks = 3
     
     # Setup sidebar
     setup_sidebar()
