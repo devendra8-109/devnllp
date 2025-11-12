@@ -433,7 +433,7 @@ stop_words = STOP_WORDS
 class GoogleFactCheckAPI:
     def __init__(self):
         # HARDCODED API KEY - REPLACE WITH YOUR ACTUAL API KEY
-        self.api_key = "AIzaSyCwmEJRN5-usSuxg-d71Qjpu5O4SjS4uVA"
+        self.api_key = ""
         
         # If the key is still the placeholder, try to get from environment as fallback
         if self.api_key == "AIzaSyCwmEJRN5-usSuxg-d71Qjpu5O4SjS4uVA":
