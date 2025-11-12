@@ -443,9 +443,9 @@ class GoogleFactCheckAPI:
                     self.api_key = env_key
                     st.success("API key loaded from environment variable")
                 else:
-                    st.error("Please replace 'YOUR_GOOGLE_FACT_CHECK_API_KEY_HERE' with your actual Google Fact Check API key")
+                    st.error("Please replace 'AIzaSyCwmEJRN5-usSuxg-d71Qjpu5O4SjS4uVA' with your actual Google Fact Check API key")
             except:
-                st.error("Please replace 'YOUR_GOOGLE_FACT_CHECK_API_KEY_HERE' with your actual Google Fact Check API key")
+                st.error("Please replace 'AIzaSyCwmEJRN5-usSuxg-d71Qjpu5O4SjS4uVA' with your actual Google Fact Check API key")
         else:
             st.success("API key loaded successfully")
         
@@ -453,7 +453,7 @@ class GoogleFactCheckAPI:
         
     def search_claims(self, query, language_code="en", max_claims=10, page_size=10):
         """Search for fact-checked claims using Google Fact Check API"""
-        if not self.api_key or self.api_key == "YOUR_GOOGLE_FACT_CHECK_API_KEY_HERE":
+        if not self.api_key or self.api_key == "AIzaSyCwmEJRN5-usSuxg-d71Qjpu5O4SjS4uVA":
             return {"error": "API key not configured. Please set your Google Fact Check API key."}
         
         params = {
