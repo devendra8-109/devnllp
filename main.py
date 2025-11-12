@@ -27,6 +27,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import time
 
+import os
+os.system("pip install streamlit scikit-learn imbalanced-learn textblob spacy seaborn matplotlib pyngrok")
+os.system("python -m spacy download en_core_web_sm")
+
+
 # sklearn / imblearn / nlp
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
